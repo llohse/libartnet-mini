@@ -55,7 +55,6 @@ typedef struct artnet_nodestack_s {
 	uint8_t mac[6];
 } artnet_nodestack_t;
 
-void artnet_update_template(artnet_node_t *n);
 void artnet_init_node(artnet_node_t *n);
 void artnet_init_port(artnet_dmx_port_t *p);
 void artnet_init_nodestack(artnet_nodestack_t, size_t num);

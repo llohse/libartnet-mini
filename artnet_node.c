@@ -11,11 +11,37 @@
 #include <stdlib.h> // calloc
 
 
-artnet_node node;
 
-void artnet_update_template(artnet_node_t n) {
+void artnet_init ...
 
+void artnet_node_main(artnet_nodestack_t *s) {
+	// recv (blocking)
+	ssize_t len;
+	uint8_t *recvbuf;
+	uint8_t *sendbuf;
+
+	while(1) {
+	    size_t i;
+	    artnet_opcode_t opcode;
+	    len = network_recv(recvbuf, len);
+	    opcode = artnet_rx_packet(recvbuf, len, srcip);
+
+	    // certain Packets require a reply
+	    
+	    switch ( opcode ) {
+		    case ARTNET_OP_ARTPOLL:
+			    // iterate over all nodes and send a reply
+			    for (i=0; i<s->num; i++) {
+				    artnet_tx_pollreply(sendbuf, &(s->nodes[i]));
+			    }
+			    break;
+		    default:
+			    break;
+	    }
+
+	}
 }
+
 
 void artnet_init_node(artnet_node_t *n) {
 	size_t i;
@@ -61,11 +87,4 @@ int artnet_init_node(artnet_node *an, size_t num_universes) {
 	an->universes = calloc(num_universes, sizeof(dmx_universe));
 
 	return 0;
-}
-
-void artnet_tick( ) {
-	ssize_t l;
-
-	l = 
-
 }

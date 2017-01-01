@@ -1,4 +1,3 @@
-#include "artnet_ll.h"
 #include "artnet_net.h"
 #include <string.h> // strncmp
 
@@ -11,6 +10,12 @@
 
 int socket_fd = 0;
 const uint16_t artnet_port = 6454;
+
+// send buffer
+uint8_t txbuf[1000];
+
+// receiver buffer
+uint8_t rxbuf[1000];
 
 void artnet_init(ipv4addr loc_ip) {
 	sockaddr_in local_sa;
@@ -59,4 +64,19 @@ void artnet_get_ip(uint32_t *dst) {
 }
 
 void artnet_get_mac(uint8_t *dst) {
+}
+
+static int main ... {
+
+	// init systen
+	
+	// init socket
+	
+	// init data structures and state machine
+
+	while (1) {
+	// recv
+	// opcode = parse into
+	// send replies
+	}
 }

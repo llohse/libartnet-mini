@@ -11,6 +11,8 @@
 
 artnet_controller_t controller;
 
+artnet_nodestack_t nodestack;
+
 // TODO: adapt for big endian systems
 
 /* dirty little helpers */
@@ -31,7 +33,7 @@ inline void write_uint32_hsb(uint8_t *dst, uint32_t n) {
        dst[3] = (uint8_t) (n);
 }
 
-artnet_opcode_t artnet_parse_packet(uint8_t *buf, size_t len, ipv4_addr_t srcip) {
+artnet_opcode_t artnet_rx_packet(uint8_t *buf, size_t len, ipv4_addr_t srcip) {
 	uint16_t opcode_be, opcode;
 
 	/* check artnet header */
@@ -63,9 +65,8 @@ artnet_opcode_t artnet_parse_packet(uint8_t *buf, size_t len, ipv4_addr_t srcip)
 
 void artnet_rx_netpoll(uint8_t *buf, size_t len, ipv4_addr_t srcip) {
 
+	// TODO: check length
 	controller.ip = srcip;
-
-	// packet size 239 bytes
 
 	//  00 id (1)
 	//  08 opcode (2)
@@ -76,6 +77,19 @@ void artnet_rx_netpoll(uint8_t *buf, size_t len, ipv4_addr_t srcip) {
 	controller.priority = buf[13];
 }
 
+void artnet_rx_address(uint8_t *buf, size_t len) {
+	
+	// TODO: check length
+	// TODO: implement
+}
+
+void artnet_rx_dmx(uint8_t *buf, size_t len) {
+	// extract header
+	//
+	// find corresponding nodes and outputs
+	//
+	// copy data
+}
 
 void artnet_tx_pollreply(uint8_t *buf, artnet_node_t *n) {
 	const size_t packet_size = 239;
