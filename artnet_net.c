@@ -11,7 +11,7 @@
 
 artnet_controller_t controller;
 
-artnet_nodestack_t nodestack;
+artnet_node_t node;
 
 // TODO: adapt for big endian systems
 

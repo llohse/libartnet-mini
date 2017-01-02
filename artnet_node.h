@@ -44,17 +44,11 @@ typedef struct artnet_node_s {
 	uint8_t ubea_ver;
 	uint8_t esta_code[2];
 
+	uint32_t ip;
+	uint8_t mac[6];
+
 	uint8_t *poll_reply_template;
 } artnet_node_t;
 
-typedef struct artnet_nodestack_s {
-	size_t num;
-	artnet_node_t *nodes;
-
-	uint32_t ip;
-	uint8_t mac[6];
-} artnet_nodestack_t;
-
 void artnet_init_node(artnet_node_t *n);
 void artnet_init_port(artnet_dmx_port_t *p);
-void artnet_init_nodestack(artnet_nodestack_t, size_t num);
