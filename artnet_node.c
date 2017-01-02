@@ -11,7 +11,6 @@
 #include <stdlib.h> // calloc
 
 
-
 void artnet_init ...
 
 void artnet_node_main(artnet_nodestack_t *s) {
@@ -27,17 +26,11 @@ void artnet_node_main(artnet_nodestack_t *s) {
 	    opcode = artnet_rx_packet(recvbuf, len, srcip);
 
 	    // certain Packets require a reply
-	    
-	    switch ( opcode ) {
-		    case ARTNET_OP_ARTPOLL:
-			    // iterate over all nodes and send a reply
-			    for (i=0; i<s->num; i++) {
-				    artnet_tx_pollreply(sendbuf, &(s->nodes[i]));
-			    }
-			    break;
-		    default:
-			    break;
+	    for (i=0; i<s->num; i++) {
 	    }
+	    
+
+	    
 
 	}
 }

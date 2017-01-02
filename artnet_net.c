@@ -1,17 +1,18 @@
-#include "artnet_ll.h"
+#include "network_ll.h"
 
 // compliance: Art-Net 4 (protocol 14)
 /* Features:
  *  - receive OpPoll and send OpPollReply
- *  - receive OpIpProg and send OpIpProgReply
  *  - receive OpDmx
  *  - receive OpAddress
- *  - receive OpInput
 */
 
+/* holds information about the remote controller */
 artnet_controller_t controller;
 
+/* the local nodestack */
 artnet_nodestack_t nodestack;
+
 
 // TODO: adapt for big endian systems
 
@@ -33,41 +34,87 @@ inline void write_uint32_hsb(uint8_t *dst, uint32_t n) {
        dst[3] = (uint8_t) (n);
 }
 
-artnet_opcode_t artnet_rx_packet(uint8_t *buf, size_t len, ipv4_addr_t srcip) {
-	uint16_t opcode_be, opcode;
+/* use ntohs to convert from little or big endian to host endianess */
+inline static uint16_t read_uint16_hsb(uint8_t *src) {
+	uint16_t v_be;
+
+	v_be = src[0] + (src[1] << 8);
+	return (uint16_t) ntohs(v_be);
+}
+
+inline static uint16_t read_uint16_lsb(uint8_t *src) {
+	uint16_t v_be;
+
+	v_be = (src[0] << 8) + src[1];
+	return (uint16_t) ntohs(v_be);
+}
+
+void artnet_handle_packet(uint8_t *buf, size_t len, in_addr_t srcip) {
+	uint16_t opcode;
+	size_t i;
 
 	/* check artnet header */
 	if ( len <= artnet_id_len ) {
 		// no artnet package
-		return 0;
+		return ARTNET_OP_INVALID;
 	}
 
 	if (strncmp(buf, artnet_id, artnet_id_len) != 0) {
 		// no artnet package
-		return 0;
+		return ARTNET_OP_INVALID;
 	}
 
-	/* this *should* work for big and little endian hosts */
-        opcode_be = buf[8] + (buf[9] << 8);
-	opcode = (artnet_opcode_t) ntohs(opcode_be);
+	opcode = read_uint16_lsb(buf+8);
 
-	switch ( opcode ) {
-		case ARTNET_OP_POLL:
-			artnet_parse_netpoll(buf, len, srcip);
-			return ARTNET_OP_POLL;
-		case ARTNET_OP_DMX:
-			artnet_parse_dmx(buf, len, srcip);
-			return ARTNET_OP_DMX;
-		default:
-			return ARTNET_OP_INVALID;
+	/* first parse packets that are relevant for all nodes in the stack */
+
+	/* keep track of controllers */
+	// TODO: more sophisticated tracking of controllers
+	if (opcode == ARTNET_OP_POLL) {
+		if (0 == artnet_rx_netpoll(buf, len)) {
+			controller.ip = srcip;
+		}
 	}
+
+	/* handle packet for each node individually */
+	for (i = 0; i < s.num; i++) {
+		artnet_node_t *n = s->nodes[i];
+		uint8_t *txbuf;
+		ssize_t txbuflen;
+
+		switch ( opcode ) {
+			case ARTNET_OP_POLL:
+				/* we already parsed this */
+				artnet_network_tx_getbuf(&txbuf, &txbuflen);
+				artnet_tx_pollreply_node(txbuf, &txbuflen, n);
+				artnet_network_tx_send(txbuf, txbuflen, controller.ip);
+				break;
+			case ARTNET_OP_DMX:
+				if (0 == artnet_rx_dmx(buf, len, n)) {
+					// does not require a reply
+				}
+				break;
+			case ARTNET_OP_ADDRESS:
+				if (0 == artnet_rx_address(buf, len, n)) {
+					artnet_network_tx_getbuf(&txbuf, &txbuflen);
+					artnet_tx_pollreply_node(txbuf, &txbuflen, n);
+					artnet_network_tx_send(txbuf, txbuflen, controller.ip);
+
+				}
+				break;
+			default:
+				break;
+		}
+	}
+
 }
 
-void artnet_rx_netpoll(uint8_t *buf, size_t len, ipv4_addr_t srcip) {
+int artnet_rx_netpoll(uint8_t *buf, size_t len) {
+
+	if ( len < artnet_len_netpoll )
+		return 1;
 
 	// TODO: check length
-	controller.ip = srcip;
-
 	//  00 id (1)
 	//  08 opcode (2)
 	//  10 protver (3-4)
@@ -75,23 +122,77 @@ void artnet_rx_netpoll(uint8_t *buf, size_t len, ipv4_addr_t srcip) {
 	controller.talktome = buf[12];
 	//  13 priority (6)
 	controller.priority = buf[13];
+
+	return 0;
 }
 
-void artnet_rx_address(uint8_t *buf, size_t len) {
+int artnet_rx_address(uint8_t *buf, size_t len, artnet_node_t *n) {
 	
 	// TODO: check length
 	// TODO: implement
+	
+	return 0;
 }
 
-void artnet_rx_dmx(uint8_t *buf, size_t len) {
-	// extract header
-	//
-	// find corresponding nodes and outputs
-	//
-	// copy data
+void artnet_rx_dmx(uint8_t *buf, size_t len, artnet_node_t *n) {
+
+	if ( len < artnet_len_dmx_header)
+		return 1;
+
+	uint8_t sequence;
+	uint8_t physical;
+	uint8_t subuni;
+	uint8_t net;
+	size_t i;
+
+	/* extract header */
+
+	//  00 id (1)
+	//  08 opcode (2)
+	//  10 protver (3-4)
+	//  12 sequence (5)
+	sequence = buf[12];
+	//  13 physical (6)
+	physical = buf[13];
+	//  14 subuni (7)
+	subuni = buf[14];
+	//  15 net (8)
+	net = buf[15];
+
+	/* check if we listen for this address */
+	if (net != n->net)
+		return 1;
+
+	//  16 length (9-10)
+	length = read_uint16_hsb(buf+16);
+
+	if(len < length+16) {
+		// incomplete packet
+		return 1;
+	}
+	if(len > 512) {
+		// malicious packet
+		return 1;
+	}
+	
+	//  18 data (11)
+	// find subscribed ports
+	for (i=0; i<n->numports_out; i++) {
+		artnet_dmx_port_t *p;
+
+		p = n->dmx_out[i];
+
+		if ( subuni == ((n->sub  << 4) + p->uni) && sequence >= p->seq) {
+			// copy data
+			memcpy(p->dmx.data, buf+16, length);
+			p->dmx.seq = sequence;
+		}	
+	}
+
+	return 0;
 }
 
-void artnet_tx_pollreply(uint8_t *buf, artnet_node_t *n) {
+int artnet_tx_pollreply_node(uint8_t *buf, size_t *buflen, artnet_node_t *n) {
 	const size_t packet_size = 239;
 	size_t i;
 
@@ -108,6 +209,9 @@ void artnet_tx_pollreply(uint8_t *buf, artnet_node_t *n) {
 	for (i = 0; i<n->numports_out) {
           buf[182+i] = n->dmx_out.status;
 	}
+
+	*buflen = artnet_len_pollreply;
+	return 0;
 }
 
 void artnet_tx_pollreply_tpl(uint8_t *buf, artnet_node_t *n, uint32_t ip, uint8_t mac[6]) {

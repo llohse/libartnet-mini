@@ -1,7 +1,7 @@
 # define FIRMWARE_VERSION 1
 
 typedef struct artnet_controller_s {
-	ipv4_addr_t ip;
+	in_addr_t ip;
 	uint8_t talktome;
 	uint8_t priority;
 	// TODO: keep track of last contact 
@@ -14,7 +14,7 @@ typedef struct artnet_dmx_port_s {
 	uint8_t seq;
 	uint8_t status;
 
-	uint8_t *dmx_t;
+	*dmx_t dmx;
 } artnet_dmx_port_t;
 
 typedef struct artnet_node_s {
