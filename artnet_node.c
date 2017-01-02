@@ -8,83 +8,26 @@
  */
 
 #include "artnet_node.h"
-#include <stdlib.h> // calloc
+#include <sys/types.h>
+#include <stdlib.h>
 
-
-
-void artnet_init ...
-
-void artnet_node_main(artnet_nodestack_t *s) {
-	// recv (blocking)
-	ssize_t len;
-	uint8_t *recvbuf;
-	uint8_t *sendbuf;
-
-	while(1) {
-	    size_t i;
-	    artnet_opcode_t opcode;
-	    len = network_recv(recvbuf, len);
-	    opcode = artnet_rx_packet(recvbuf, len, srcip);
-
-	    // certain Packets require a reply
-	    
-	    switch ( opcode ) {
-		    case ARTNET_OP_ARTPOLL:
-			    // iterate over all nodes and send a reply
-			    for (i=0; i<s->num; i++) {
-				    artnet_tx_pollreply(sendbuf, &(s->nodes[i]));
-			    }
-			    break;
-		    default:
-			    break;
-	    }
-
-	}
-}
-
-
-void artnet_init_node(artnet_node_t *n) {
+void artnet_init_node(artnet_node_t *n, size_t n_in, size_t n_out) {
 	size_t i;
-
 	static uint8_t curbind = 1; // current bind index
 
-	n->bindindex = curbind;
+	n->bindindex = curbind++;
+	n->numports_in = n_in;
+	n->numports_out = n_out;
 
-	for(i=0; i<4; i++) {
-		artnet_init_port(dmx_out[i]);
+	for(i=0; i<n_in; i++) {
+		artnet_init_port(&(n->dmx_in[i]));
 	}
-
-	curbind++;
-
-}
-
-void artnet_init_nodestack(artnet_nodestack_t *s, size_t num) {
-	size_t i;
-
-	s->num = num;
-	s->nodes = (artnet_node_t *) calloc(num, sizeof(artnet_node_t));
-	artnet_get_ip(&(s->ip));
-	artnet_get_mac(s->mac);
-
-	for(i=0; i<num; i++) {
-		artnet_init_node(s->nodes[i]);
+	for(i=0; i<n_out; i++) {
+		artnet_init_port(&(n->dmx_out[i]));
 	}
 }
 
 void artnet_init_port(artnet_dmx_port_t *p) {
-
+ 	p->dmx = malloc(sizeof(dmx_t));
 }
 
-int artnet_init_node(artnet_node *an, size_t num_universes) {
-	int i;
-
-	if ( num_universes > 4 ) {
-		return -1;
-	}
-
-	// TODO: test if legal number of universes
-	an->num_universes = num_universes;
-	an->universes = calloc(num_universes, sizeof(dmx_universe));
-
-	return 0;
-}

@@ -1,28 +1,30 @@
-#include "artnet_net.h"
-#include <string.h> // strncmp
+#include <sys/types.h>
+#include "artnet.h"
 
-# if linux
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <sys/socket.h>
-#endif
-# if chibios 
-#endif
+#include <string.h> // memset
+
+
+uint8_t mac[6] = { 0x02, 0x00, 0x00, 0x00, 0x00 };
+uint32_t ip;
 
 int socket_fd = 0;
-const uint16_t artnet_port = 6454;
 
-// send buffer
-uint8_t txbuf[1000];
+artnet_node_t node;
 
-// receiver buffer
-uint8_t rxbuf[1000];
+#define RXBUF_SIZE 1024
+uint8_t rxbuf[RXBUF_SIZE];
 
-void artnet_init(ipv4addr loc_ip) {
-	sockaddr_in local_sa;
+void network_init_artnet(void) {
+	struct sockaddr_in local_sa;
 	memset(&local_sa, 0, sizeof(struct sockaddr_in));
 	local_sa.sin_family = AF_INET;
-	local_sa.sin_addr.s_addr = loc_ip;
-	local_sa.sin_port = htons(artnet_port);
+	local_sa.sin_addr.s_addr = INADDR_ANY;
+	local_sa.sin_port = htons(ARTNET_PORT);
 
 	socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
 
@@ -31,52 +33,72 @@ void artnet_init(ipv4addr loc_ip) {
 	}
 }
 
-void artnet_send(char *buf, size_t len, ipv4addr dst_ip) {
+void network_send_artnet(artnet_packet_t *packet) {
+	struct sockaddr_in remote_sa;
 	ssize_t send_len;
 
-	sockaddr_in remote_sa;
 	memset(&remote_sa, 0, sizeof(struct sockaddr_in));
 	remote_sa.sin_family = AF_INET;
-	remote_sa.sin_addr.s_addr = dst_ip;
-	remote_sa.sin_port = htons(artnet_port);
+	remote_sa.sin_addr.s_addr = packet->ip;
+	remote_sa.sin_port = htons(ARTNET_PORT);
 
-	send_len = sendto(socket_fd, buf, len, 0, (struct sockaddr *) &remote_sa, sizeof(struct sockaddr_in));
+	send_len = sendto(socket_fd, packet->data, packet->len, 0, (struct sockaddr *) &remote_sa, sizeof(struct sockaddr_in));
 
-	if (send_len < len) {
-		// ERROR
+	if (send_len < packet->len) {
+		// something went wrong
+		return;
 	} 
+
+	return;
 }
 
-ssize_t artnet_recv(char *buf, size_t len, ipv4addr *src_ip) {
-	sockaddr_in remote_sa;
-	ssize_t recvlen;
+
+void network_recv_artnet(artnet_packet_t *packet) {
+	struct sockaddr_in remote_sa;
+	ssize_t len;
+
 	memset(&remote_sa, 0, sizeof(struct sockaddr_in));
 	remote_sa.sin_family = AF_INET;
 	socklen_t addrlen = sizeof(struct sockaddr_in);
 
-	recvlen = recvfrom(socket_fd, buf, *len, 0, (struct sockaddr *) &remote_sa, &addrlen);
-	*ipv4addr = remote_sa.sin_addr.s_addr;
+	packet->data = rxbuf;
 
-	return recvlen;
+	len = recvfrom(socket_fd, rxbuf, RXBUF_SIZE, 0, (struct sockaddr *) &remote_sa, &addrlen);
+
+	packet->ip = remote_sa.sin_addr.s_addr;
+	packet->data = rxbuf;
+	packet->len = len;
 }
 
-void artnet_get_ip(uint32_t *dst) {
-}
-
-void artnet_get_mac(uint8_t *dst) {
-}
-
-static int main ... {
-
+/* main thread */
+int main(int argc, char **argv) {
 	// init systen
 	
-	// init socket
+	// init udp socket
+	network_init_artnet();
 	
 	// init data structures and state machine
+	artnet_init_node(&node, 0, 1);
+	node.ip = ip;
+	memcpy(node.mac, mac, 6);
+	strcpy(node.shortname, "libartnet-mini");
+
+	artnet_network_init(&node);
 
 	while (1) {
-	// recv
-	// opcode = parse into
-	// send replies
+		artnet_packet_t rxpacket;
+		artnet_packet_t txpacket;
+
+		txpacket.len = 0;
+
+		network_recv_artnet(&rxpacket);
+
+		printf("Received packet of length %d.\n", rxpacket.len);
+
+		artnet_handle_packet(&node, &rxpacket, &txpacket);
+
+		if (txpacket.len > 0) {
+			network_send_artnet(&txpacket);
+		}
 	}
 }

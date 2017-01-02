@@ -1,7 +1,14 @@
+#ifndef _ARTNET_NODE_H
+#define _ARTNET_NODE_H 1
+
+#include <sys/types.h>
+#include <netinet/in.h>
+
 # define FIRMWARE_VERSION 1
+#define ARTNET_LEN_POLLREPLY 239
 
 typedef struct artnet_controller_s {
-	ipv4_addr_t ip;
+	in_addr_t ip;
 	uint8_t talktome;
 	uint8_t priority;
 	// TODO: keep track of last contact 
@@ -14,7 +21,7 @@ typedef struct artnet_dmx_port_s {
 	uint8_t seq;
 	uint8_t status;
 
-	uint8_t *dmx_t;
+	dmx_t *dmx;
 } artnet_dmx_port_t;
 
 typedef struct artnet_node_s {
@@ -47,8 +54,10 @@ typedef struct artnet_node_s {
 	uint32_t ip;
 	uint8_t mac[6];
 
-	uint8_t *poll_reply_template;
+	uint8_t poll_reply_template[ARTNET_LEN_POLLREPLY];
 } artnet_node_t;
 
-void artnet_init_node(artnet_node_t *n);
+void artnet_init_node(artnet_node_t *n, size_t n_in, size_t n_out);
 void artnet_init_port(artnet_dmx_port_t *p);
+
+#endif
