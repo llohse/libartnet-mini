@@ -94,7 +94,7 @@ enum artnet_porttype_t {
 
 /* packet lengths */
 const size_t artnet_len_netpoll = 14;
-const size_t artnet_len_address = 14;
+const size_t artnet_len_address = 107;
 const size_t artnet_len_dmx_header = 18;
 const size_t artnet_len_pollreply = ARTNET_LEN_POLLREPLY;
 

@@ -19,6 +19,8 @@ typedef struct { uint8_t data[512]; } dmx_t;
 
 typedef struct artnet_dmx_port_s {
 	uint8_t uni;
+	uint8_t uni_default;
+
 	uint8_t seq;
 	uint8_t status;
 
@@ -33,7 +35,9 @@ typedef struct artnet_node_s {
 	uint8_t numports_out;
 
 	uint8_t net; // The top 7 bits of the 15 bit Port-Address
+	uint8_t net_default;
 	uint8_t sub; // Bits 7-4 of the 15 bit Port-Address
+	uint8_t sub_default;
 
 	uint8_t bindindex;
 
@@ -44,8 +48,8 @@ typedef struct artnet_node_s {
 	uint8_t goodoutput[4];
 
 	/* various information included in PollReply */
-        uint8_t shortname[18];
-        uint8_t longname[64];
+        char shortname[18];
+        char longname[64];
 
 	uint16_t oem;
 

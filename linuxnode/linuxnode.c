@@ -10,7 +10,7 @@
 
 
 uint8_t mac[6] = { 0x02, 0x00, 0x00, 0x00, 0x00 };
-uint32_t ip;
+struct in_addr ip;
 
 int socket_fd = 0;
 
@@ -72,6 +72,21 @@ void network_recv_artnet(artnet_packet_t *packet) {
 
 /* main thread */
 int main(int argc, char **argv) {
+	// read mac and ip
+	/*
+	if (argc < 3) {
+		printf("Not enough arguments!\n");
+		return 1;
+	}
+	*/
+	inet_aton("10.10.4.127", &ip);
+	mac[0] = 0xc8;
+	mac[1] = 0x5b;
+	mac[2] = 0x76;
+	mac[3] = 0x45;
+	mac[4] = 0x56;
+	mac[5] = 0x4b;
+
 	// init systen
 	
 	// init udp socket
@@ -79,7 +94,7 @@ int main(int argc, char **argv) {
 	
 	// init data structures and state machine
 	artnet_init_node(&node, 0, 1);
-	node.ip = ip;
+	node.ip = ip.s_addr;
 	memcpy(node.mac, mac, 6);
 	strcpy((char *) node.shortname, "libartnet-mini");
 
@@ -89,11 +104,17 @@ int main(int argc, char **argv) {
 		artnet_packet_t rxpacket;
 		artnet_packet_t txpacket;
 
+		struct in_addr dstip;
+
 		txpacket.len = 0;
 
 		network_recv_artnet(&rxpacket);
 
 		artnet_handle_packet(&node, &rxpacket, &txpacket);
+
+		dstip.s_addr = txpacket.ip;
+
+		ARTNET_DEBUG("Sending %d bytes to %s\n", txpacket.len, inet_ntoa(dstip));
 
 		if (txpacket.len > 0) {
 			network_send_artnet(&txpacket);

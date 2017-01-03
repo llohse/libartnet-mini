@@ -38,6 +38,13 @@ static inline void write_uint32_hsb(uint8_t *dst, uint32_t n) {
        dst[3] = (uint8_t) (n);
 }
 
+static inline void write_uint32_lsb(uint8_t *dst, uint32_t n) {
+       dst[0] = (uint8_t) (n);
+       dst[1] = (uint8_t) (n >> 8);
+       dst[2] = (uint8_t) (n >> 16);
+       dst[3] = (uint8_t) (n >> 24);
+}
+
 static inline uint16_t read_uint16_hsb(uint8_t *src) {
 	return ( src[0] << 8 )  + ( src[0] );
 }
@@ -109,7 +116,6 @@ int artnet_rx_netpoll(uint8_t *buf, size_t len) {
 	if ( len < artnet_len_netpoll )
 		return 1;
 
-	// TODO: check length
 	//  00 id (1)
 	//  08 opcode (2)
 	//  10 protver (3-4)
@@ -121,10 +127,61 @@ int artnet_rx_netpoll(uint8_t *buf, size_t len) {
 	return 0;
 }
 
+static inline void artnet_program_address(uint8_t new, uint8_t *cur, uint8_t def) {
+	if (new == 0x00) {
+		// reset to default
+		*cur = def;
+	}
+	else if((new & 0x80) == 0x80) {
+		// bit 7 is set
+		*cur = new & 0x0a;
+	}
+
+}
+
 int artnet_rx_address(uint8_t *buf, size_t len, artnet_node_t *n) {
+
+	uint8_t i;
+
+	if ( len < artnet_len_address )
+		return 1;
+
+	/* skip if bindindex does not match */
+	if (buf[13] != n->bindindex) {
+		// TODO make nicer
+		return 1;
+	}
 	
-	// TODO: check length
-	// TODO: implement
+	//  00 id (1)
+	//  08 opcode (2)
+	//  10 protver (3-4)
+	//  12 netswitch (5)
+	artnet_program_address(buf[12], &(n->net), n->net_default);
+	//  13 bindindex (6)
+	//  14 shortname (7)
+	if ( buf[14] != 0 ) {
+		strncpy(n->shortname, (const char *) (buf+14), 18);
+		// TODO log status
+	}
+	//  32 longname (8)
+	if ( buf[32] != 0 ) {
+		strncpy(n->longname, (const char *) (buf+32), 64);
+		// TODO log status
+	}
+	//  96 swin (9)
+	for (i = 0; i < n->numports_in; i++ ) {
+		artnet_program_address(buf[96+i], &(n->dmx_in[i].uni), n->dmx_in[i].uni_default);
+	}
+	// 100 swout (10)
+	for (i = 0; i < n->numports_out; i++ ) {
+		artnet_program_address(buf[100+i], &(n->dmx_out[i].uni), n->dmx_out[i].uni_default);
+	}
+	// 104 subswitch (11)
+	artnet_program_address(buf[104], &(n->sub), n->sub_default);
+	// 105 swvideo (12)
+	/* we ignore this */
+	// 106 swcommand (13)
+	/* we ignore this */
 	
 	return 0;
 }
@@ -135,7 +192,7 @@ int artnet_rx_dmx(uint8_t *buf, size_t len, artnet_node_t *n) {
 		return 1;
 
 	uint8_t sequence;
-	uint8_t physical;
+//	uint8_t physical;
 	uint8_t subuni;
 	uint8_t net;
 	uint16_t length;
@@ -150,7 +207,7 @@ int artnet_rx_dmx(uint8_t *buf, size_t len, artnet_node_t *n) {
 	//  12 sequence (5)
 	sequence = buf[12];
 	//  13 physical (6)
-	physical = buf[13];
+//	physical = buf[13];
 	//  14 subuni (7)
 	subuni = buf[14];
 	//  15 net (8)
@@ -225,7 +282,8 @@ int artnet_tx_pollreply_tpl(uint8_t *buf, artnet_node_t *n) {
 	//  08 opcode (2)
 	write_uint16_lsb(buf+8, (uint16_t) ARTNET_OP_POLLREPLY);
 	//  10 ipaddress (3)
-	write_uint32_hsb(buf+10, n->ip);
+	/* stored internally as big endian, transmission as little endian */
+	write_uint32_lsb(buf+10, n->ip);
 	//  14 port (4)
 	write_uint16_lsb(buf+14, ARTNET_PORT);
 	//  16 versinfo (5-6)
@@ -282,10 +340,11 @@ int artnet_tx_pollreply_tpl(uint8_t *buf, artnet_node_t *n) {
 	// 200 style (31)
 	buf[200] = (uint8_t) ARTNET_ST_NODE;
 	// 201 mac (32-37)
-	memcpy(buf+200, n->mac, 6);
+	memcpy(buf+201, n->mac, 6);
 	// 207 bindip (38)
 	/* bind ip is always this device */
-	write_uint32_hsb(buf+207, n->ip);
+	/* stored internally as big endian, transmission as little endian */
+	write_uint32_lsb(buf+207, n->ip);
 	// 211 bindindex (39)
 	buf[211] = n->bindindex;
 	// 212 status2 (40)
