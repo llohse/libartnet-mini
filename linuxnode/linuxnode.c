@@ -67,7 +67,7 @@ void network_recv_artnet(artnet_packet_t *packet) {
 
 	packet->ip = remote_sa.sin_addr.s_addr;
 	packet->data = rxbuf;
-	packet->len = len;
+	packet->len = (uint16_t) len;
 }
 
 /* main thread */
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
 	artnet_init_node(&node, 0, 1);
 	node.ip = ip;
 	memcpy(node.mac, mac, 6);
-	strcpy(node.shortname, "libartnet-mini");
+	strcpy((char *) node.shortname, "libartnet-mini");
 
 	artnet_network_init(&node);
 
