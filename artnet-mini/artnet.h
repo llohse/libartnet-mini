@@ -5,6 +5,10 @@
 
 #define ARTNET_PORT 6454
 
+#ifndef ARTNET_DEBUG
+#define ARTNET_DEBUG(...) do {; } while (0); 
+#endif
+
 typedef struct artnet_packet_s {
 	ipv4_addr_t ip;
 	uint16_t len;

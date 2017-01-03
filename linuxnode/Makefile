@@ -10,5 +10,7 @@ CSRC = ${ARTNETMINI_SRC} \
 
 CC=gcc
 
+CFLAGS=-Wall -D'ARTNET_DEBUG(...)=do {fprintf(stderr, \#\#__VA_ARGS__);} while(0)'
+
 linuxnode: ${CSRC}
-	${CC} -o linuxnode ${CSRC} -I ${INCDIR}
+	${CC} -o linuxnode ${CSRC} -I ${INCDIR} ${CFLAGS}

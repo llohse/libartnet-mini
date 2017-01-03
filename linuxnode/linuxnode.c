@@ -93,8 +93,6 @@ int main(int argc, char **argv) {
 
 		network_recv_artnet(&rxpacket);
 
-		printf("Received packet of length %d.\n", rxpacket.len);
-
 		artnet_handle_packet(&node, &rxpacket, &txpacket);
 
 		if (txpacket.len > 0) {

@@ -75,9 +75,7 @@ void artnet_handle_packet(artnet_node_t *n, const artnet_packet_t *rxpacket, art
 
 	opcode = read_uint16_lsb(buf+8);
 
-#ifdef DEBUG
-	printf("Opcode: %#04x\n", opcode);
-#endif
+	ARTNET_DEBUG("Opcode: %#04x\n", opcode);
 
 	switch ( opcode ) {
 		case ARTNET_OP_POLL:
