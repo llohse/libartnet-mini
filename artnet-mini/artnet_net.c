@@ -6,7 +6,6 @@
  *  - receive OpAddress
 */
 
-#include <netinet/in.h>
 #include <string.h>
 #include "artnet.h"
 #include "artnet_net.h"
@@ -23,7 +22,7 @@ artnet_controller_t controller;
 /* transmit buffer filled by the artnet system */
 uint8_t artnet_txbuf[1024];
 
-// TODO: adapt for big endian systems
+/* Only works on little endian systems */
 
 /* dirty little helpers */
 static inline void write_uint16_lsb(uint8_t *dst, uint16_t n) {
@@ -43,19 +42,12 @@ static inline void write_uint32_hsb(uint8_t *dst, uint32_t n) {
        dst[3] = (uint8_t) (n);
 }
 
-/* use ntohs to convert from little or big endian to host endianess */
 static inline uint16_t read_uint16_hsb(uint8_t *src) {
-	uint16_t v_be;
-
-	v_be = src[0] + (src[1] << 8);
-	return (uint16_t) ntohs(v_be);
+	return ( src[0] << 8 )  + ( src[0] );
 }
 
 static inline uint16_t read_uint16_lsb(uint8_t *src) {
-	uint16_t v_be;
-
-	v_be = (src[0] << 8) + src[1];
-	return (uint16_t) ntohs(v_be);
+	return ( src[0] ) + ( src[1] << 8 );
 }
 
 void artnet_network_init(artnet_node_t *n) {
@@ -69,7 +61,6 @@ void artnet_handle_packet(artnet_node_t *n, const artnet_packet_t *rxpacket, art
 
 	size_t len = rxpacket->len;
 	uint8_t *buf = rxpacket->data;
-	in_addr_t srcip = rxpacket->ip;
 
 	/* check artnet header */
 	if ( len <= artnet_id_len ) {
@@ -93,7 +84,7 @@ void artnet_handle_packet(artnet_node_t *n, const artnet_packet_t *rxpacket, art
 			/* keep track of controllers */
 			// TODO: more sophisticated tracking of controllers
 			if (0 == artnet_rx_netpoll(buf, len)) {
-				controller.ip = srcip;
+				controller.ip = rxpacket->ip;
 
 				artnet_tx_pollreply_node(artnet_txbuf, &txlen, n);
 				txpacket->data = artnet_txbuf;
@@ -153,7 +144,8 @@ int artnet_rx_dmx(uint8_t *buf, size_t len, artnet_node_t *n) {
 	uint8_t physical;
 	uint8_t subuni;
 	uint8_t net;
-	uint8_t length;
+	uint16_t length;
+
 	size_t i;
 
 	/* extract header */
@@ -177,12 +169,12 @@ int artnet_rx_dmx(uint8_t *buf, size_t len, artnet_node_t *n) {
 	//  16 length (9-10)
 	length = read_uint16_hsb(buf+16);
 
-	if(len < length+16) {
-		// incomplete packet
+	if(length > 512) {
+		// malicious packet
 		return 1;
 	}
-	if(len > 512) {
-		// malicious packet
+	if(len < (size_t) (length+16) ) {
+		// incomplete packet
 		return 1;
 	}
 	

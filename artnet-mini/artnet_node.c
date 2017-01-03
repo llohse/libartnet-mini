@@ -8,7 +8,6 @@
  */
 
 #include "artnet_node.h"
-#include <sys/types.h>
 #include <stdlib.h>
 
 void artnet_init_node(artnet_node_t *n, size_t n_in, size_t n_out) {

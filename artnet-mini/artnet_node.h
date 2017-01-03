@@ -1,14 +1,16 @@
 #ifndef _ARTNET_NODE_H
 #define _ARTNET_NODE_H 1
 
-#include <sys/types.h>
-#include <netinet/in.h>
+#include <stdint.h>
+#include <stddef.h> // size_t
 
 # define FIRMWARE_VERSION 1
 #define ARTNET_LEN_POLLREPLY 239
 
+typedef uint32_t ipv4_addr_t;
+
 typedef struct artnet_controller_s {
-	in_addr_t ip;
+	ipv4_addr_t ip;
 	uint8_t talktome;
 	uint8_t priority;
 	// TODO: keep track of last contact 
