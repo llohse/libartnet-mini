@@ -2,7 +2,6 @@
 #define _ARTNET_NODE_H 1
 
 #include <stdint.h>
-#include <stddef.h> // size_t
 
 # define FIRMWARE_VERSION 1
 #define ARTNET_LEN_POLLREPLY 239
@@ -30,8 +29,8 @@ typedef struct artnet_node_s {
 	artnet_dmx_port_t dmx_out[4];
 	artnet_dmx_port_t dmx_in[4];
 
-	size_t numports_in;
-	size_t numports_out;
+	uint8_t numports_in;
+	uint8_t numports_out;
 
 	uint8_t net; // The top 7 bits of the 15 bit Port-Address
 	uint8_t sub; // Bits 7-4 of the 15 bit Port-Address
@@ -59,7 +58,7 @@ typedef struct artnet_node_s {
 	uint8_t poll_reply_template[ARTNET_LEN_POLLREPLY];
 } artnet_node_t;
 
-void artnet_init_node(artnet_node_t *n, size_t n_in, size_t n_out);
+void artnet_init_node(artnet_node_t *n, uint8_t n_in, uint8_t n_out);
 void artnet_init_port(artnet_dmx_port_t *p);
 
 #endif

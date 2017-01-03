@@ -8,10 +8,10 @@
  */
 
 #include "artnet_node.h"
-#include <stdlib.h>
+#include <stdlib.h> // malloc
 
-void artnet_init_node(artnet_node_t *n, size_t n_in, size_t n_out) {
-	size_t i;
+void artnet_init_node(artnet_node_t *n, uint8_t n_in, uint8_t n_out) {
+	uint8_t i;
 	static uint8_t curbind = 1; // current bind index
 
 	n->bindindex = curbind++;

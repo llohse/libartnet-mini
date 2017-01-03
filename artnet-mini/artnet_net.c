@@ -7,14 +7,10 @@
 */
 
 #include <string.h>
+#include <stddef.h> // size_t
 #include "artnet.h"
 #include "artnet_net.h"
 
-#define DEBUG 1
-
-#ifdef DEBUG
-#include <stdio.h>
-#endif
 
 /* holds information about the remote controller */
 artnet_controller_t controller;

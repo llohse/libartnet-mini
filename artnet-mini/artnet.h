@@ -5,6 +5,12 @@
 
 #define ARTNET_PORT 6454
 
+#define DEBUG 1
+
+#ifdef DEBUG
+#include <stdio.h>
+#endif
+
 #ifndef ARTNET_DEBUG
 #define ARTNET_DEBUG(...) do {; } while (0); 
 #endif
